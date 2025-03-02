@@ -13,10 +13,9 @@ def load_items():
         return []
     
     df = pd.read_csv(CSV_FILE)
-    required_columns = {"Item", "Selling Price", "Profit"}
     
-    if not required_columns.issubset(df.columns):
-        raise ValueError("CSV file does not have the required columns.")
+    if "Item" not in df.columns or "Selling Price" not in df.columns or "Profit" not in df.columns:
+        return []
     
     return df.to_dict(orient="records")
 
@@ -32,7 +31,8 @@ def save_sales(data):
 
 @app.route("/")
 def index():
-    return render_template("index.html", items=load_items())
+    items = load_items()
+    return render_template("index.html", items=items)
 
 @app.route("/save", methods=["POST"])
 def save():
@@ -48,7 +48,7 @@ def analysis():
 def get_sales_data():
     if not os.path.exists(SALES_FILE):
         return jsonify([])
-
+    
     df = pd.read_csv(SALES_FILE)
     
     start_date = request.json.get("start_date")
