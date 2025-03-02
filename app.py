@@ -6,7 +6,7 @@ import glob
 app = Flask(__name__)
 
 REPORTS_FOLDER = "daily_reports"
-ITEMS_CSV = "C:/Users/suraj/Downloads/Jagdamb99/restaurant_items.csv"
+ITEMS_CSV = "ITEMS_CSV = "restaurant_items.csv"
 
 if not os.path.exists(REPORTS_FOLDER):
     os.makedirs(REPORTS_FOLDER)
