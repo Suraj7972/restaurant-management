@@ -24,6 +24,7 @@ def load_items():
 @app.route("/", methods=["GET", "POST"])
 def index():
     items = load_items()
+    saved_message = None
 
     if request.method == "POST":
         selected_date = request.form.get("date")
@@ -46,13 +47,14 @@ def index():
 
             sales_data.append([selected_date, row["Item"], row["Selling Price"], row["Profit"], quantity, item_sales, item_profit])
 
+        # Save report to CSV
         report_file = os.path.join(REPORTS_FOLDER, f"{selected_date}.csv")
         df_report = pd.DataFrame(sales_data, columns=["Date", "Item", "Selling Price", "Profit", "Quantity Sold", "Total Sales", "Total Profit"])
         df_report.to_csv(report_file, index=False)
 
-        return render_template("index.html", data=items, message=f"Report for {selected_date} saved successfully!")
+        saved_message = f"Report for {selected_date} saved successfully!"
 
-    return render_template("index.html", data=items)
+    return render_template("index.html", data=items, message=saved_message)
 
 @app.route("/analysis", methods=["GET", "POST"])
 def analysis():
