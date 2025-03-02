@@ -1,53 +1,54 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Analysis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Sales & Profit Analysis</h2>
 
-{% block title %}Sales Analysis{% endblock %}
-
-{% block content %}
-<div class="container mt-5">
-    <h2 class="text-center">Sales & Profit Analysis</h2>
-
-    <form method="post">
-        <div class="row mb-3">
-            <div class="col">
-                <label for="start_date" class="form-label">Start Date:</label>
-                <input type="date" id="start_date" name="start_date" class="form-control" required>
+        <form method="post">
+            <div class="row mb-3">
+                <div class="col">
+                    <label for="start_date" class="form-label">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" required>
+                </div>
+                <div class="col">
+                    <label for="end_date" class="form-label">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control" required>
+                </div>
             </div>
-            <div class="col">
-                <label for="end_date" class="form-label">End Date:</label>
-                <input type="date" id="end_date" name="end_date" class="form-control" required>
-            </div>
+            <button type="submit" class="btn btn-primary">Analyze</button>
+        </form>
+
+        {% if total_sales is not none %}
+        <div class="mt-4">
+            <h5>Total Sales: ₹{{ total_sales }}</h5>
+            <h5>Total Profit: ₹{{ total_profit }}</h5>
         </div>
-        <button type="submit" class="btn btn-primary">Analyze</button>
-    </form>
 
-    {% if total_sales is not none %}
-    <div class="mt-4">
-        <h5>Total Sales: ₹{{ total_sales }}</h5>
-        <h5>Total Profit: ₹{{ total_profit }}</h5>
+        <table class="table table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Total Sales (₹)</th>
+                    <th>Total Profit (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(dates|length) %}
+                <tr>
+                    <td>{{ dates[i] }}</td>
+                    <td>{{ sales[i] }}</td>
+                    <td>{{ profits[i] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
     </div>
-
-    <canvas id="salesChart" class="mt-4"></canvas>
-    <script>
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: {{ dates | tojson }},
-                datasets: [
-                    {
-                        label: 'Total Sales (₹)',
-                        data: {{ sales | tojson }},
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                    },
-                    {
-                        label: 'Total Profit (₹)',
-                        data: {{ profits | tojson }},
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                    }
-                ]
-            },
-        });
-    </script>
-    {% endif %}
-</div>
-{% endblock %}
+</body>
+</html>
