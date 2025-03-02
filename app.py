@@ -4,66 +4,48 @@ import os
 
 app = Flask(__name__)
 
+# Load items data
 CSV_FILE = "items.csv"
-SALES_FILE = "sales_data.csv"
-
-# Load items from CSV
-def load_items():
-    if not os.path.exists(CSV_FILE):
-        return []
-    
+if os.path.exists(CSV_FILE):
     df = pd.read_csv(CSV_FILE)
-    
-    if "Item" not in df.columns or "Selling Price" not in df.columns or "Profit" not in df.columns:
-        return []
-    
-    return df.to_dict(orient="records")
+else:
+    df = pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
 
-# Save daily sales
-def save_sales(data):
-    df = pd.DataFrame(data)
-    
-    if os.path.exists(SALES_FILE):
-        existing_df = pd.read_csv(SALES_FILE)
-        df = pd.concat([existing_df, df], ignore_index=True)
-    
-    df.to_csv(SALES_FILE, index=False)
+# Ensure data is valid
+df.fillna(0, inplace=True)
+items = df.to_dict(orient="records")
+
+SALES_DATA_FILE = "sales_data.csv"
 
 @app.route("/")
 def index():
-    items = load_items()
     return render_template("index.html", items=items)
 
 @app.route("/save", methods=["POST"])
 def save():
-    data = request.json
-    save_sales(data)
-    return jsonify({"status": "success", "message": "Sales data saved successfully."})
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "No data received"}), 400
+
+    df_sales = pd.DataFrame(data)
+    if os.path.exists(SALES_DATA_FILE):
+        df_existing = pd.read_csv(SALES_DATA_FILE)
+        df_sales = pd.concat([df_existing, df_sales], ignore_index=True)
+
+    df_sales.to_csv(SALES_DATA_FILE, index=False)
+    return jsonify({"message": "Report saved successfully!"})
 
 @app.route("/analysis")
 def analysis():
-    return render_template("analysis.html")
+    if os.path.exists(SALES_DATA_FILE):
+        df = pd.read_csv(SALES_DATA_FILE)
+        df["Date"] = pd.to_datetime(df["Date"])
+        df_summary = df.groupby("Date")[["Total Sales (₹)", "Total Profit (₹)"]].sum().reset_index()
+        sales_data = df_summary.to_dict(orient="records")
+    else:
+        sales_data = []
 
-@app.route("/get_sales_data", methods=["POST"])
-def get_sales_data():
-    if not os.path.exists(SALES_FILE):
-        return jsonify([])
-    
-    df = pd.read_csv(SALES_FILE)
-    
-    start_date = request.json.get("start_date")
-    end_date = request.json.get("end_date")
-    
-    df["Date"] = pd.to_datetime(df["Date"])
-    
-    if start_date and end_date:
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
-        df = df[(df["Date"] >= start_date) & (df["Date"] <= end_date)]
-    
-    sales_summary = df.groupby("Date").agg({"Total Sales (₹)": "sum", "Total Profit (₹)": "sum"}).reset_index()
-    
-    return jsonify(sales_summary.to_dict(orient="records"))
+    return render_template("analysis.html", sales_data=sales_data)
 
 if __name__ == "__main__":
     app.run(debug=True)
