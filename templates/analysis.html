@@ -3,50 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jagdamb99 - Sales & Profit Analysis</title>
+    <title>Sales Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Jagdamb99 - Sales & Profit Analysis</h1>
-
-    <label for="start-date">Start Date:</label>
-    <input type="date" id="start-date">
-    
-    <label for="end-date">End Date:</label>
-    <input type="date" id="end-date">
-    
-    <button onclick="fetchData()">Show Analysis</button>
-
+    <h2>Sales Analysis</h2>
     <canvas id="salesChart"></canvas>
 
     <script>
-        function fetchData() {
-            let startDate = document.getElementById("start-date").value;
-            let endDate = document.getElementById("end-date").value;
+        let salesData = {{ sales_data|tojson }};
+        let dates = salesData.map(entry => entry["Date"]);
+        let totalSales = salesData.map(entry => entry["Total Sales (₹)"]);
+        let totalProfit = salesData.map(entry => entry["Total Profit (₹)"]);
 
-            fetch("/get_sales_data", {
-                method: "POST",
-                body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-                headers: { "Content-Type": "application/json" }
-            })
-            .then(response => response.json())
-            .then(data => {
-                let dates = data.map(d => d.Date);
-                let sales = data.map(d => d["Total Sales (₹)"]);
-                let profits = data.map(d => d["Total Profit (₹)"]);
-
-                new Chart(document.getElementById("salesChart"), {
-                    type: "line",
-                    data: {
-                        labels: dates,
-                        datasets: [
-                            { label: "Total Sales (₹)", data: sales, borderColor: "blue" },
-                            { label: "Total Profit (₹)", data: profits, borderColor: "green" }
-                        ]
+        let ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: "Total Sales (₹)",
+                        data: totalSales,
+                        borderColor: "blue",
+                        fill: false
+                    },
+                    {
+                        label: "Total Profit (₹)",
+                        data: totalProfit,
+                        borderColor: "green",
+                        fill: false
                     }
-                });
-            });
-        }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: "Date" } },
+                    y: { title: { display: true, text: "Amount (₹)" } }
+                }
+            }
+        });
     </script>
 </body>
 </html>
