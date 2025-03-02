@@ -1,96 +1,69 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import os
-import glob
 
 app = Flask(__name__)
 
-REPORTS_FOLDER = "daily_reports"
-ITEMS_CSV = "restaurant_items.csv"
+CSV_FILE = "items.csv"
+SALES_FILE = "sales_data.csv"
 
-# Ensure reports folder exists
-if not os.path.exists(REPORTS_FOLDER):
-    os.makedirs(REPORTS_FOLDER)
-
+# Load items from CSV
 def load_items():
-    """Load restaurant items from CSV file."""
-    if not os.path.exists(ITEMS_CSV):
-        print("Error: restaurant_items.csv is missing!")
-        return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
+    if not os.path.exists(CSV_FILE):
+        return []
     
-    df = pd.read_csv(ITEMS_CSV)
+    df = pd.read_csv(CSV_FILE)
+    required_columns = {"Item", "Selling Price", "Profit"}
+    
+    if not required_columns.issubset(df.columns):
+        raise ValueError("CSV file does not have the required columns.")
+    
+    return df.to_dict(orient="records")
 
-    expected_columns = {"Item", "Selling Price", "Profit"}
-    actual_columns = set(df.columns.str.strip())
+# Save daily sales
+def save_sales(data):
+    df = pd.DataFrame(data)
+    
+    if os.path.exists(SALES_FILE):
+        existing_df = pd.read_csv(SALES_FILE)
+        df = pd.concat([existing_df, df], ignore_index=True)
+    
+    df.to_csv(SALES_FILE, index=False)
 
-    if not expected_columns.issubset(actual_columns):
-        print(f"Error: CSV file columns do not match! Found: {actual_columns}")
-        return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
-
-    return df
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    items = load_items()
-    saved_message = None
+    return render_template("index.html", items=load_items())
 
-    if request.method == "POST":
-        selected_date = request.form.get("date")
-        if not selected_date:
-            return "Please select a date.", 400
+@app.route("/save", methods=["POST"])
+def save():
+    data = request.json
+    save_sales(data)
+    return jsonify({"status": "success", "message": "Sales data saved successfully."})
 
-        sales_data = []
-        total_sales = 0
-        total_profit = 0
-
-        for index, row in items.iterrows():
-            quantity = request.form.get(f"quantity_{index}", 0)
-            quantity = int(quantity) if quantity else 0
-
-            item_sales = quantity * row["Selling Price"]
-            item_profit = quantity * row["Profit"]
-
-            total_sales += item_sales
-            total_profit += item_profit
-
-            sales_data.append([selected_date, row["Item"], row["Selling Price"], row["Profit"], quantity, item_sales, item_profit])
-
-        # Save report to CSV
-        report_file = os.path.join(REPORTS_FOLDER, f"{selected_date}.csv")
-        df_report = pd.DataFrame(sales_data, columns=["Date", "Item", "Selling Price", "Profit", "Quantity Sold", "Total Sales", "Total Profit"])
-        df_report.to_csv(report_file, index=False)
-
-        saved_message = f"Report for {selected_date} saved successfully!"
-
-    return render_template("index.html", data=items, message=saved_message)
-
-@app.route("/analysis", methods=["GET", "POST"])
+@app.route("/analysis")
 def analysis():
-    total_sales = None
-    total_profit = None
-    dates = []
-    sales = []
-    profits = []
+    return render_template("analysis.html")
 
-    if request.method == "POST":
-        start_date = request.form["start_date"]
-        end_date = request.form["end_date"]
+@app.route("/get_sales_data", methods=["POST"])
+def get_sales_data():
+    if not os.path.exists(SALES_FILE):
+        return jsonify([])
 
-        report_files = sorted(glob.glob(os.path.join(REPORTS_FOLDER, "*.csv")))
-
-        for report_file in report_files:
-            date = os.path.basename(report_file).replace(".csv", "")
-            if start_date <= date <= end_date:
-                df = pd.read_csv(report_file)
-                dates.append(date)
-                sales.append(df["Total Sales"].sum())
-                profits.append(df["Total Profit"].sum())
-
-        total_sales = sum(sales)
-        total_profit = sum(profits)
-
-    return render_template("analysis.html", total_sales=total_sales, total_profit=total_profit, dates=dates, sales=sales, profits=profits)
+    df = pd.read_csv(SALES_FILE)
+    
+    start_date = request.json.get("start_date")
+    end_date = request.json.get("end_date")
+    
+    df["Date"] = pd.to_datetime(df["Date"])
+    
+    if start_date and end_date:
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
+        df = df[(df["Date"] >= start_date) & (df["Date"] <= end_date)]
+    
+    sales_summary = df.groupby("Date").agg({"Total Sales (₹)": "sum", "Total Profit (₹)": "sum"}).reset_index()
+    
+    return jsonify(sales_summary.to_dict(orient="records"))
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Use Render's assigned port
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(debug=True)
