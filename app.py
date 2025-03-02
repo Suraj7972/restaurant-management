@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 import pandas as pd
 import os
 import glob
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
 
 REPORTS_FOLDER = "daily_reports"
 ITEMS_CSV = "restaurant_items.csv"
@@ -77,11 +77,6 @@ def analysis():
         total_profit = sum(profits)
 
     return render_template("analysis.html", total_sales=total_sales, total_profit=total_profit, dates=dates, sales=sales, profits=profits)
-
-# Serve static files
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory('static', filename)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # Use Render's assigned port
