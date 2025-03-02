@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Analysis{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Sales & Profit Analysis</h2>
+
+    <form method="post">
+        <div class="row mb-3">
+            <div class="col">
+                <label for="start_date" class="form-label">Start Date:</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" required>
+            </div>
+            <div class="col">
+                <label for="end_date" class="form-label">End Date:</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Analyze</button>
+    </form>
+
+    {% if total_sales is not none %}
+    <div class="mt-4">
+        <h5>Total Sales: ₹{{ total_sales }}</h5>
+        <h5>Total Profit: ₹{{ total_profit }}</h5>
+    </div>
+
+    <canvas id="salesChart" class="mt-4"></canvas>
+    <script>
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ dates | tojson }},
+                datasets: [
+                    {
+                        label: 'Total Sales (₹)',
+                        data: {{ sales | tojson }},
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    },
+                    {
+                        label: 'Total Profit (₹)',
+                        data: {{ profits | tojson }},
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    }
+                ]
+            },
+        });
+    </script>
+    {% endif %}
+</div>
+{% endblock %}
