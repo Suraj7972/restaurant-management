@@ -1,17 +1,19 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 import pandas as pd
 import os
 import glob
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 REPORTS_FOLDER = "daily_reports"
-ITEMS_CSV = "ITEMS_CSV = "restaurant_items.csv"
+ITEMS_CSV = "restaurant_items.csv"
 
+# Ensure reports folder exists
 if not os.path.exists(REPORTS_FOLDER):
     os.makedirs(REPORTS_FOLDER)
 
 def load_items():
+    """Load restaurant items from CSV file."""
     if os.path.exists(ITEMS_CSV):
         return pd.read_csv(ITEMS_CSV)
     return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
@@ -76,5 +78,11 @@ def analysis():
 
     return render_template("analysis.html", total_sales=total_sales, total_profit=total_profit, dates=dates, sales=sales, profits=profits)
 
+# Serve static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))  # Use Render's assigned port
+    app.run(host="0.0.0.0", port=port, debug=False)
