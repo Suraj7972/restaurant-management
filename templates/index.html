@@ -7,9 +7,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Jagdamb99 - Sales & Profit Management</h1>
-    
-    <label for="date">Select Date:</label>
+    <h2>Jagdamb99 - Sales & Profit Management</h2>
+    <label>Select Date:</label>
     <input type="date" id="date">
 
     <table border="1">
@@ -22,6 +21,7 @@
             </tr>
         </thead>
         <tbody id="items-table">
+            <!-- Items will be dynamically inserted here -->
         </tbody>
     </table>
 
@@ -29,7 +29,7 @@
     <p>Total Profit: ₹<span id="total-profit">0.00</span></p>
 
     <button id="save">Save Report</button>
-    <a href="/analysis"><button>Go to Analysis</button></a>
+    <a href="/analysis"><button>View Analysis</button></a>
 
     <script>
         let items = {{ items|tojson }};
@@ -37,10 +37,14 @@
 
         function updateTable() {
             let tbody = $("#items-table");
-            tbody.empty();
+            tbody.empty();  // Clear table before updating
             
             let totalSales = 0;
             let totalProfit = 0;
+
+            if (!selectedDate) {
+                return;
+            }
 
             items.forEach(item => {
                 let row = $("<tr>");
@@ -54,8 +58,11 @@
                     let sellingPrice = parseFloat(item["Selling Price"]) * quantity;
                     let profit = parseFloat(item["Profit"]) * quantity;
 
-                    $("#total-sales").text(sellingPrice.toFixed(2));
-                    $("#total-profit").text(profit.toFixed(2));
+                    totalSales += sellingPrice;
+                    totalProfit += profit;
+
+                    $("#total-sales").text(totalSales.toFixed(2));
+                    $("#total-profit").text(totalProfit.toFixed(2));
                 });
 
                 row.append($("<td>").append(quantityInput));
@@ -70,7 +77,7 @@
 
         $("#save").on("click", function () {
             let salesData = [];
-            
+
             $("#items-table tr").each(function () {
                 let row = $(this).find("td");
                 let item = row.eq(0).text();
