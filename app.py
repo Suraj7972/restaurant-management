@@ -15,7 +15,10 @@ if not os.path.exists(REPORTS_FOLDER):
 def load_items():
     """Load restaurant items from CSV file."""
     if os.path.exists(ITEMS_CSV):
-        return pd.read_csv(ITEMS_CSV)
+        df = pd.read_csv(ITEMS_CSV)
+        if not {'Item', 'Selling Price', 'Profit'}.issubset(df.columns):
+            raise ValueError("CSV file does not have the required columns.")
+        return df
     return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
 
 @app.route("/", methods=["GET", "POST"])
@@ -47,7 +50,7 @@ def index():
         df_report = pd.DataFrame(sales_data, columns=["Date", "Item", "Selling Price", "Profit", "Quantity Sold", "Total Sales", "Total Profit"])
         df_report.to_csv(report_file, index=False)
 
-        return f"Report for {selected_date} saved successfully!"
+        return render_template("index.html", data=items, message=f"Report for {selected_date} saved successfully!")
 
     return render_template("index.html", data=items)
 
