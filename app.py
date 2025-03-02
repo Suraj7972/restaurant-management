@@ -14,12 +14,20 @@ if not os.path.exists(REPORTS_FOLDER):
 
 def load_items():
     """Load restaurant items from CSV file."""
-    if os.path.exists(ITEMS_CSV):
-        df = pd.read_csv(ITEMS_CSV)
-        if not {'Item', 'Selling Price', 'Profit'}.issubset(df.columns):
-            raise ValueError("CSV file does not have the required columns.")
-        return df
-    return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
+    if not os.path.exists(ITEMS_CSV):
+        print("Error: restaurant_items.csv is missing!")
+        return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
+    
+    df = pd.read_csv(ITEMS_CSV)
+
+    expected_columns = {"Item", "Selling Price", "Profit"}
+    actual_columns = set(df.columns.str.strip())
+
+    if not expected_columns.issubset(actual_columns):
+        print(f"Error: CSV file columns do not match! Found: {actual_columns}")
+        return pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
+
+    return df
 
 @app.route("/", methods=["GET", "POST"])
 def index():
