@@ -29,6 +29,7 @@
     <p>Total Profit: ₹<span id="total-profit">0.00</span></p>
 
     <button id="save">Save Report</button>
+    <a href="/analysis"><button>Go to Analysis</button></a>
 
     <script>
         let items = {{ items|tojson }};
@@ -53,11 +54,8 @@
                     let sellingPrice = parseFloat(item["Selling Price"]) * quantity;
                     let profit = parseFloat(item["Profit"]) * quantity;
 
-                    totalSales += sellingPrice;
-                    totalProfit += profit;
-
-                    $("#total-sales").text(totalSales.toFixed(2));
-                    $("#total-profit").text(totalProfit.toFixed(2));
+                    $("#total-sales").text(sellingPrice.toFixed(2));
+                    $("#total-profit").text(profit.toFixed(2));
                 });
 
                 row.append($("<td>").append(quantityInput));
