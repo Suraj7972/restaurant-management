@@ -1,62 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Analysis - Jagdamb99</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Analysis</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Sales & Profit Analysis</h1>
-    <label>Start Date: <input type="date" id="start-date"></label>
-    <label>End Date: <input type="date" id="end-date"></label>
-    <button onclick="loadAnalysis()">Generate Report</button>
-    <canvas id="salesChart"></canvas>
-    <canvas id="profitChart"></canvas>
-    
-    <script>
-        function loadAnalysis() {
-            let startDate = $('#start-date').val();
-            let endDate = $('#end-date').val();
-            if (!startDate || !endDate) {
-                alert('Please select start and end dates');
-                return;
+
+<h1>Sales Analysis</h1>
+<label>Start Date: <input type="date" id="startDate"></label>
+<label>End Date: <input type="date" id="endDate"></label>
+<button id="generateAnalysis">Generate Analysis</button>
+
+<canvas id="salesChart"></canvas>
+
+<script>
+$("#generateAnalysis").click(function() {
+    let startDate = $("#startDate").val();
+    let endDate = $("#endDate").val();
+
+    if (!startDate || !endDate) {
+        alert("Please select date range!");
+        return;
+    }
+
+    $.post("/get_analysis", JSON.stringify({ start_date: startDate, end_date: endDate }), function(data) {
+        let labels = data.map(d => d.date);
+        let salesData = data.map(d => d.sales);
+        let profitData = data.map(d => d.profit);
+
+        new Chart(document.getElementById("salesChart"), {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: "Total Sales", data: salesData, borderColor: "blue", fill: false },
+                    { label: "Total Profit", data: profitData, borderColor: "green", fill: false }
+                ]
             }
-            $.getJSON(`/get_analysis?start_date=${startDate}&end_date=${endDate}`, function (data) {
-                if (data.length === 0) {
-                    alert('No data available');
-                    return;
-                }
-                let dates = [...new Set(data.map(d => d.Date))];
-                let totalSales = dates.map(date => data.filter(d => d.Date === date).reduce((sum, item) => sum + item["Selling Price"], 0));
-                let totalProfit = dates.map(date => data.filter(d => d.Date === date).reduce((sum, item) => sum + item["Profit"], 0));
-                
-                new Chart(document.getElementById('salesChart').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: dates,
-                        datasets: [{
-                            label: 'Total Sales',
-                            data: totalSales,
-                            borderColor: 'blue',
-                            fill: false
-                        }]
-                    }
-                });
-                
-                new Chart(document.getElementById('profitChart').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: dates,
-                        datasets: [{
-                            label: 'Total Profit',
-                            data: totalProfit,
-                            borderColor: 'green',
-                            fill: false
-                        }]
-                    }
-                });
-            });
-        }
-    </script>
+        });
+    }, "json");
+});
+</script>
+
 </body>
 </html>
