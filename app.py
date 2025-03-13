@@ -5,8 +5,8 @@ import os
 app = Flask(__name__)
 
 # Load dataset
-DATA_FILE = "sales_data.csv"
-MENU_FILE = "menu.csv"
+DATA_FILE = "restaurant_items.csv"
+MENU_FILE = "restaurant_items.csv"
 
 # Ensure the CSV file exists
 if not os.path.exists(DATA_FILE):
