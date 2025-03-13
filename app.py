@@ -4,48 +4,70 @@ import os
 
 app = Flask(__name__)
 
-# Load items data
-CSV_FILE = "items.csv"
-if os.path.exists(CSV_FILE):
-    df = pd.read_csv(CSV_FILE)
-else:
-    df = pd.DataFrame(columns=["Item", "Selling Price", "Profit"])
+# Load dataset
+DATA_FILE = "sales_data.csv"
+MENU_FILE = "menu.csv"
 
-# Ensure data is valid
-df.fillna(0, inplace=True)
-items = df.to_dict(orient="records")
+# Ensure the CSV file exists
+if not os.path.exists(DATA_FILE):
+    pd.DataFrame(columns=["Date", "Item", "Quantity Sold", "Total Sales", "Total Profit"]).to_csv(DATA_FILE, index=False)
 
-SALES_DATA_FILE = "sales_data.csv"
+# Load menu data
+menu_df = pd.read_csv(MENU_FILE)
 
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html", items=items)
+    return render_template('index.html', menu=menu_df.to_dict(orient="records"))
 
-@app.route("/save", methods=["POST"])
-def save():
-    data = request.get_json()
-    if not data:
-        return jsonify({"message": "No data received"}), 400
+@app.route('/get_menu')
+def get_menu():
+    return jsonify(menu_df.to_dict(orient="records"))
 
-    df_sales = pd.DataFrame(data)
-    if os.path.exists(SALES_DATA_FILE):
-        df_existing = pd.read_csv(SALES_DATA_FILE)
-        df_sales = pd.concat([df_existing, df_sales], ignore_index=True)
+@app.route('/save_sales', methods=['POST'])
+def save_sales():
+    data = request.json
+    date = data.get('date')
+    items = data.get('items')
 
-    df_sales.to_csv(SALES_DATA_FILE, index=False)
-    return jsonify({"message": "Report saved successfully!"})
+    sales_records = []
+    total_sales = 0
+    total_profit = 0
 
-@app.route("/analysis")
+    for item in items:
+        name = item['name']
+        quantity = int(item['quantity'])
+        selling_price = float(item['selling_price'])
+        profit_per_item = float(item['profit'])
+
+        total_item_sales = quantity * selling_price
+        total_item_profit = quantity * profit_per_item
+
+        total_sales += total_item_sales
+        total_profit += total_item_profit
+
+        sales_records.append([date, name, quantity, total_item_sales, total_item_profit])
+
+    df = pd.DataFrame(sales_records, columns=["Date", "Item", "Quantity Sold", "Total Sales", "Total Profit"])
+    df.to_csv(DATA_FILE, mode='a', header=False, index=False)
+
+    return jsonify({"message": "Sales saved successfully!", "total_sales": total_sales, "total_profit": total_profit})
+
+@app.route('/analysis')
 def analysis():
-    if os.path.exists(SALES_DATA_FILE):
-        df = pd.read_csv(SALES_DATA_FILE)
-        df["Date"] = pd.to_datetime(df["Date"])
-        df_summary = df.groupby("Date")[["Total Sales (₹)", "Total Profit (₹)"]].sum().reset_index()
-        sales_data = df_summary.to_dict(orient="records")
-    else:
-        sales_data = []
+    df = pd.read_csv(DATA_FILE)
+    return render_template('analysis.html', sales_data=df.to_dict(orient="records"))
 
-    return render_template("analysis.html", sales_data=sales_data)
+@app.route('/get_analysis', methods=['GET'])
+def get_analysis():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    df = pd.read_csv(DATA_FILE)
+    df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y')
+    
+    filtered_df = df[(df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))]
+    
+    return jsonify(filtered_df.to_dict(orient="records"))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
