@@ -7,98 +7,100 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h2>Jagdamb99 - Sales & Profit Management</h2>
-    <label>Select Date:</label>
-    <input type="date" id="date">
 
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Selling Price (₹)</th>
-                <th>Profit (₹)</th>
-                <th>Quantity Sold</th>
-            </tr>
-        </thead>
-        <tbody id="items-table">
-            <!-- Items will be dynamically inserted here -->
-        </tbody>
-    </table>
+<h1>Jagdamb99 - Sales & Profit Management</h1>
 
-    <p>Total Sales: ₹<span id="total-sales">0.00</span></p>
-    <p>Total Profit: ₹<span id="total-profit">0.00</span></p>
+<label>Select Date:</label>
+<input type="date" id="datePicker">
+<br><br>
 
-    <button id="save">Save Report</button>
-    <a href="/analysis"><button>View Analysis</button></a>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Selling Price (₹)</th>
+            <th>Profit (₹)</th>
+            <th>Quantity Sold</th>
+        </tr>
+    </thead>
+    <tbody id="menuTable"></tbody>
+</table>
 
-    <script>
-        let items = {{ items|tojson }};
-        let selectedDate = "";
+<h3>Total Sales: ₹<span id="totalSales">0.00</span></h3>
+<h3>Total Profit: ₹<span id="totalProfit">0.00</span></h3>
 
-        function updateTable() {
-            let tbody = $("#items-table");
-            tbody.empty();  // Clear table before updating
-            
-            let totalSales = 0;
-            let totalProfit = 0;
+<button id="saveReport">Save Report</button>
 
-            if (!selectedDate) {
-                return;
-            }
+<script>
+$(document).ready(function() {
+    let menuData = [];
 
-            items.forEach(item => {
-                let row = $("<tr>");
-                row.append($("<td>").text(item["Item"]));
-                row.append($("<td>").text(item["Selling Price"]));
-                row.append($("<td>").text(item["Profit"]));
-
-                let quantityInput = $("<input>").attr("type", "number").attr("min", "0").val(0);
-                quantityInput.on("input", function () {
-                    let quantity = parseInt($(this).val()) || 0;
-                    let sellingPrice = parseFloat(item["Selling Price"]) * quantity;
-                    let profit = parseFloat(item["Profit"]) * quantity;
-
-                    totalSales += sellingPrice;
-                    totalProfit += profit;
-
-                    $("#total-sales").text(totalSales.toFixed(2));
-                    $("#total-profit").text(totalProfit.toFixed(2));
-                });
-
-                row.append($("<td>").append(quantityInput));
-                tbody.append(row);
+    function loadMenu() {
+        $.get('/get_menu', function(data) {
+            menuData = data;
+            let tableContent = "";
+            data.forEach(item => {
+                tableContent += `
+                    <tr>
+                        <td>${item.Item}</td>
+                        <td>${item.SellingPrice}</td>
+                        <td>${item.Profit}</td>
+                        <td><input type="number" min="0" value="0" class="quantity" data-item="${item.Item}" data-price="${item.SellingPrice}" data-profit="${item.Profit}"></td>
+                    </tr>
+                `;
             });
+            $("#menuTable").html(tableContent);
+        });
+    }
+
+    $(document).on('input', '.quantity', function() {
+        let totalSales = 0;
+        let totalProfit = 0;
+
+        $(".quantity").each(function() {
+            let quantity = parseInt($(this).val()) || 0;
+            let price = parseFloat($(this).data('price'));
+            let profit = parseFloat($(this).data('profit'));
+
+            totalSales += quantity * price;
+            totalProfit += quantity * profit;
+        });
+
+        $("#totalSales").text(totalSales.toFixed(2));
+        $("#totalProfit").text(totalProfit.toFixed(2));
+    });
+
+    $("#saveReport").click(function() {
+        let date = $("#datePicker").val();
+        if (!date) {
+            alert("Please select a date.");
+            return;
         }
 
-        $("#date").on("change", function () {
-            selectedDate = $(this).val();
-            updateTable();
+        let salesData = [];
+        $(".quantity").each(function() {
+            let quantity = parseInt($(this).val()) || 0;
+            if (quantity > 0) {
+                salesData.push({
+                    name: $(this).data('item'),
+                    quantity: quantity,
+                    selling_price: $(this).data('price'),
+                    profit: $(this).data('profit')
+                });
+            }
         });
 
-        $("#save").on("click", function () {
-            let salesData = [];
+        $.post("/save_sales", JSON.stringify({date: date, items: salesData}), function(response) {
+            alert(response.message);
+            $("#totalSales").text("0.00");
+            $("#totalProfit").text("0.00");
+            $(".quantity").val("0");
+        }, "json");
+    });
 
-            $("#items-table tr").each(function () {
-                let row = $(this).find("td");
-                let item = row.eq(0).text();
-                let sellingPrice = parseFloat(row.eq(1).text());
-                let profit = parseFloat(row.eq(2).text());
-                let quantity = parseInt(row.eq(3).find("input").val()) || 0;
+    loadMenu();
+});
+</script>
 
-                if (quantity > 0) {
-                    salesData.push({
-                        "Date": selectedDate,
-                        "Item": item,
-                        "Total Sales (₹)": sellingPrice * quantity,
-                        "Total Profit (₹)": profit * quantity
-                    });
-                }
-            });
-
-            $.post("/save", JSON.stringify(salesData), function (response) {
-                alert(response.message);
-            }, "json");
-        });
-    </script>
 </body>
 </html>
