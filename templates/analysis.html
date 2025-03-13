@@ -3,47 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analysis</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Jagdamb99 - Sales & Profit Analysis</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h2>Sales Analysis</h2>
-    <canvas id="salesChart"></canvas>
 
-    <script>
-        let salesData = {{ sales_data|tojson }};
-        let dates = salesData.map(entry => entry["Date"]);
-        let totalSales = salesData.map(entry => entry["Total Sales (₹)"]);
-        let totalProfit = salesData.map(entry => entry["Total Profit (₹)"]);
+<h1>Jagdamb99 - Sales & Profit Analysis</h1>
 
-        let ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [
-                    {
-                        label: "Total Sales (₹)",
-                        data: totalSales,
-                        borderColor: "blue",
-                        fill: false
-                    },
-                    {
-                        label: "Total Profit (₹)",
-                        data: totalProfit,
-                        borderColor: "green",
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { title: { display: true, text: "Date" } },
-                    y: { title: { display: true, text: "Amount (₹)" } }
-                }
-            }
+<label>Start Date:</label>
+<input type="date" id="startDate">
+
+<label>End Date:</label>
+<input type="date" id="endDate">
+
+<button id="loadData">Load Data</button>
+
+<table border="1">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Quantity Sold</th>
+            <th>Total Sales (₹)</th>
+            <th>Total Profit (₹)</th>
+        </tr>
+    </thead>
+    <tbody id="salesTable"></tbody>
+</table>
+
+<script>
+$("#loadData").click(function() {
+    let start = $("#startDate").val();
+    let end = $("#endDate").val();
+    if (!start || !end) {
+        alert("Please select a date range.");
+        return;
+    }
+
+    $.get(`/get_analysis?start_date=${start}&end_date=${end}`, function(data) {
+        let content = "";
+        data.forEach(sale => {
+            content += `
+                <tr>
+                    <td>${sale.Date}</td>
+                    <td>${sale.Item}</td>
+                    <td>${sale["Quantity Sold"]}</td>
+                    <td>${sale["Total Sales"]}</td>
+                    <td>${sale["Total Profit"]}</td>
+                </tr>
+            `;
         });
-    </script>
+        $("#salesTable").html(content);
+    });
+});
+</script>
+
 </body>
 </html>
