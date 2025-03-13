@@ -1,79 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jagdamb99 - Sales & Profit Management</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Jagdamb99 - Sales & Profit Management</h1>
-    <label>Select Date: <input type="date" id="date-picker"></label>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Selling Price (₹)</th>
-                <th>Profit (₹)</th>
-                <th>Quantity Sold</th>
-            </tr>
-        </thead>
-        <tbody id="menu-table"></tbody>
-    </table>
-    <button onclick="saveReport()">Save Report</button>
-    <script>
-        $(document).ready(function () {
-            $('#date-picker').change(function () {
-                loadMenu();
+
+<h1>Jagdamb99 - Sales & Profit Management</h1>
+<label>Select Date: <input type="date" id="datePicker"></label>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Selling Price (₹)</th>
+            <th>Profit (₹)</th>
+            <th>Quantity Sold</th>
+        </tr>
+    </thead>
+    <tbody id="menuTable"></tbody>
+</table>
+
+<button id="saveReport">Save Report</button>
+
+<script>
+$(document).ready(function() {
+    let menuData = [];
+
+    function loadMenu() {
+        $.post("/get_menu", function(data) {
+            menuData = data;
+            updateMenuTable();
+        });
+    }
+
+    function updateMenuTable() {
+        let tableBody = $("#menuTable").empty();
+        menuData.forEach(item => {
+            tableBody.append(`
+                <tr>
+                    <td>${item.Item}</td>
+                    <td>${item["Selling Price"]}</td>
+                    <td>${item["Profit Margin"]}</td>
+                    <td><input type="number" min="0" data-item="${item.Item}" class="quantity-input"></td>
+                </tr>
+            `);
+        });
+    }
+
+    $(document).on("input", ".quantity-input", function() {
+        let quantity = parseInt($(this).val()) || 0;
+        let itemName = $(this).data("item");
+        let item = menuData.find(i => i.Item === itemName);
+
+        let sellingPrice = item["Selling Price"] * quantity;
+        let profit = item["Profit Margin"] * quantity;
+
+        $(this).closest("tr").find("td:eq(1)").text(sellingPrice);
+        $(this).closest("tr").find("td:eq(2)").text(profit);
+    });
+
+    $("#saveReport").click(function() {
+        let date = $("#datePicker").val();
+        if (!date) {
+            alert("Please select a date!");
+            return;
+        }
+
+        let items = [];
+        $(".quantity-input").each(function() {
+            let quantity = parseInt($(this).val()) || 0;
+            let itemName = $(this).data("item");
+            let item = menuData.find(i => i.Item === itemName);
+
+            items.push({
+                "Item": item.Item,
+                "Selling Price": item["Selling Price"] * quantity,
+                "Profit Margin": item["Profit Margin"] * quantity,
+                "Quantity Sold": quantity
             });
         });
 
-        function loadMenu() {
-            $.getJSON('/get_menu', function (data) {
-                let rows = '';
-                data.forEach(item => {
-                    rows += `<tr>
-                        <td>${item.Item}</td>
-                        <td>${item["Selling Price"].toFixed(2)}</td>
-                        <td>${item["Profit"].toFixed(2)}</td>
-                        <td><input type="number" min="0" value="0" onchange="updateProfit(this, ${item["Selling Price"]}, ${item["Profit"]})"></td>
-                    </tr>`;
-                });
-                $('#menu-table').html(rows);
-            });
-        }
+        $.post("/save_report", JSON.stringify({ date, items }), function(response) {
+            alert(response.message);
+            loadMenu();
+        }, "json");
+    });
 
-        function updateProfit(input, price, profit) {
-            let quantity = parseInt(input.value) || 0;
-            let row = $(input).closest('tr');
-            row.find('td:eq(1)').text((price * quantity).toFixed(2));
-            row.find('td:eq(2)').text((profit * quantity).toFixed(2));
-        }
+    $("#datePicker").change(loadMenu);
+    loadMenu();
+});
+</script>
 
-        function saveReport() {
-            let date = $('#date-picker').val();
-            if (!date) {
-                alert('Please select a date');
-                return;
-            }
-            let items = [];
-            $('#menu-table tr').each(function () {
-                let item = {
-                    "Item": $(this).find('td:eq(0)').text(),
-                    "Selling Price": parseFloat($(this).find('td:eq(1)').text()),
-                    "Profit": parseFloat($(this).find('td:eq(2)').text()),
-                    "Quantity Sold": parseInt($(this).find('td:eq(3) input').val())
-                };
-                items.push(item);
-            });
-            $.ajax({
-                url: '/save_report',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ date: date, items: items }),
-                success: function (response) {
-                    alert(response.message);
-                }
-            });
-        }
-    </script>
 </body>
 </html>
